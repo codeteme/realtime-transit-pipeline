@@ -1,0 +1,19 @@
+
+# Airflow runtime
+airflow_home/
+airflow/
+logs/
+*.db
+
+# Python environment
+venv/
+.env
+__pycache__/
+
+# Data artifacts (optional)
+data/bronze/
+data/gold/
+
+# OS files
+.DS_Store
+
