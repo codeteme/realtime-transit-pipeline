@@ -60,14 +60,7 @@ transform_task = BashOperator(
     dag=dag,
 )
 
-# Task 5: Upload to S3
-upload_task = BashOperator(
-    task_id='upload_to_s3',
-    bash_command='python /opt/airflow/scripts/tfl_upload_s3.py',
-    dag=dag,
-)
-
-# Task 6 (Optional): Run analysis
+# Task 5: Run analysis
 analyze_task = BashOperator(
     task_id='analyze_data',
     bash_command='python /opt/airflow/scripts/tfl_analysis_minimal.py',
@@ -75,4 +68,4 @@ analyze_task = BashOperator(
 )
 
 # Define task dependencies
-ingest_task >> consume_task >> wait_task >> transform_task >> [upload_task, analyze_task]
+ingest_task >> consume_task >> wait_task >> transform_task >> analyze_task

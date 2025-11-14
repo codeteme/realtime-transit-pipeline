@@ -1,15 +1,10 @@
+#!/usr/bin/env python3
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, avg
 
-spark = SparkSession.builder.appName("tfl_analysis").getOrCreate()
+spark = SparkSession.builder.appName("Analysis").master("local[*]").getOrCreate()
+spark.sparkContext.setLogLevel("ERROR")
 
-df = spark.read.parquet("data/gold")
-
-result = (
-    df.groupBy("route")
-      .agg(avg(col("seconds_to_arrival")).alias("avg_wait_sec"))
-      .orderBy(col("avg_wait_sec"))
-)
-
-result.show(10, truncate=False)
+df = spark.read.parquet("/opt/airflow/data/gold")
+print(f"\n📊 Total records: {df.count()}")
+df.show(10)
 spark.stop()
