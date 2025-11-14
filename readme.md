@@ -55,37 +55,56 @@ Key services (all defined in `docker-compose.yml`):
    docker compose build
    ```
 
-2. **Initialize Airflow DB/users + create data directories**
+2. **Fix Airflow UID issue (macOS/Linux)**
+   
+   Create or update your `.env` file to prevent user identification errors:
+   ```bash
+   echo "AIRFLOW_UID=50000" >> .env
+   ```
+
+3. **Initialize Airflow DB/users + create data directories**
    ```bash
    docker compose run --rm airflow-init
    ```
+   
+   **If user creation fails** (UID error on macOS), create the admin user manually:
+   ```bash
+   docker compose up -d
+   docker compose exec airflow-scheduler airflow users create \
+     --username admin \
+     --firstname Admin \
+     --lastname User \
+     --role Admin \
+     --email admin@example.com \
+     --password admin
+   ```
 
-3. **Launch the stack**
+4. **Launch the stack**
    ```bash
    docker compose up -d
    ```
    Services:
-   - Airflow UI: `http://localhost:8080`
+   - Airflow UI: `http://localhost:8080` (credentials: `admin` / `admin`)
    - Kafka UI: `http://localhost:8090`
 
-4. **Validate before triggering**
+5. **Validate before triggering**
    ```bash
    docker compose exec airflow-scheduler python /opt/airflow/scripts/validate_pipeline.py
    ```
 
-5. **Smoke test the whole pipeline**
+6. **Smoke test the whole pipeline**
    ```bash
    ./test_pipeline_simple.sh
    ```
    This script ingests once, checks Kafka, consumes to bronze, transforms to gold, and runs analysis.
 
-6. **Trigger the scheduled DAG**
+7. **Trigger the scheduled DAG**
    ```bash
    docker compose exec airflow-scheduler airflow dags trigger tfl_realtime_pipeline
    ```
    The DAG runs every 15 minutes (`*/15 * * * *`). Monitor in the Airflow UI or via `docker compose logs airflow-scheduler`.
 
-7. **Shut down**
+8. **Shut down**
    ```bash
    docker compose down
    ```
@@ -137,11 +156,26 @@ These directories are bind-mounted into the Airflow containers (`/opt/airflow/da
    - CLI example:  
      `docker compose exec kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic tfl_raw --from-beginning --max-messages 5`
 
+3. **Airflow Login Issues**
+   If you cannot log in to the Airflow UI (`http://localhost:8080`):
+   - Default credentials: `admin` / `admin`
+   - If user wasn't created, run:
+     ```bash
+     docker compose exec airflow-scheduler airflow users create \
+       --username admin \
+       --firstname Admin \
+       --lastname User \
+       --role Admin \
+       --email admin@example.com \
+       --password admin
+     ```
+
 4. **Full clean restart**
    ```bash
    docker compose down -v
    rm -rf data/bronze data/gold logs /tmp/tfl_data
    docker compose build
+   echo "AIRFLOW_UID=50000" > .env
    docker compose run --rm airflow-init
    docker compose up -d
    ```
@@ -150,3 +184,4 @@ These directories are bind-mounted into the Airflow containers (`/opt/airflow/da
    - *Ingest task hangs*: usually waiting on TfL API or failing to reach Kafka (`kafka:9092`). Confirm network access from the Airflow container.
    - *Consumer finds zero files*: ensure ingest actually published new messages and the consumer group is pointing to `tfl_raw`.
    - *PySpark errors*: verify the Airflow image was rebuilt (so Java + PySpark exist) and the container has enough memory.
+   - *UID not found error*: Add `AIRFLOW_UID=50000` to your `.env` file and restart services.
