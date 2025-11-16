@@ -12,9 +12,6 @@ venv/
 .envrc
 __pycache__/
 
-# Screenshots
-screenshots/
-
 # Data artifacts (optional)
 data/bronze/
 data/gold/
