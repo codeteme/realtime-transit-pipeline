@@ -4,6 +4,30 @@ This project ingests live arrival data from Transport for London (TfL), lands th
 
 ---
 
+## Project Demo
+
+### Real-Time Dashboard
+The Streamlit dashboard provides comprehensive analytics on London Underground arrivals:
+
+![TfL Dashboard - Analytics]("screenshots/dashboard_analytics.png")
+*Wait time distribution, top 10 busiest stations, next arrivals, and average wait times by station*
+
+![Station Activity Heatmap]("screenshots/station_heatmap.png")
+*Geographic heatmap showing station activity intensity across London*
+
+![Live Transit Dashboard]("screenshots/live_transit.png")
+*Real-time train positions with auto-refresh, showing 355 arrivals across 36 stations*
+
+### Pipeline Orchestration
+![Airflow DAG Success]("screenshots/airflow_dag.png")
+*Successful execution of the complete pipeline: ingest → consume → wait → transform → analyze*
+
+### Kafka Streaming
+![Kafka UI - tfl_raw Topic]("screenshots/kafka_ui.png")
+*Kafka topic `tfl_raw` showing 2024 messages streamed in real-time*
+
+---
+
 ## System Overview
 
 ```
@@ -22,6 +46,30 @@ Key services (all defined in `docker-compose.yml`):
 
 ---
 
+## Features
+
+### Real-Time Analytics
+- **Live Dashboard**: Auto-refreshing Streamlit interface with 5-second intervals
+- **Wait Time Distribution**: Histogram showing arrival time patterns
+- **Station Metrics**: Top 10 busiest stations with color-coded arrival counts
+- **Next Arrivals**: Real-time table of upcoming trains by station and line
+- **Geographic Visualization**: Interactive heatmap and live train position map
+
+### Data Pipeline
+- **Streaming Ingestion**: Continuous data pull from TfL API to Kafka
+- **Bronze Layer**: Raw JSON snapshots preserved for audit/replay
+- **Gold Layer**: Curated Parquet files with optimized schema
+- **Transform**: PySpark-powered data cleaning and enrichment
+- **Orchestration**: Airflow DAG running every 15 minutes
+
+### Monitoring & Operations
+- **Kafka UI**: Visual inspection of topics, messages, and consumer groups
+- **Airflow UI**: Pipeline monitoring, task logs, and manual triggers
+- **Validation Scripts**: Health checks for all components
+- **Error Handling**: Graceful failures with retry logic
+
+---
+
 ## Repository Structure
 
 | Path | Description |
@@ -36,15 +84,6 @@ Key services (all defined in `docker-compose.yml`):
 | `data/bronze`, `data/gold` | Host-mounted landing zones mirroring `/opt/airflow/data/...` inside containers. |
 | `.env` | Sample configuration for Docker Compose (AWS creds, Airflow admin user, UID/GID). |
 | `requirements.txt` | Python dependency lock for the Airflow image. |
-
----
-
-## Prerequisites
-
-- Docker + Docker Compose v2
-- Python 3.10+ (for running scripts locally, outside containers)
-- Internet access for TfL API calls
-- Optional: AWS account/credentials if you plan to push data to S3 (`s3:CreateBucket`, `s3:ListBucket`, `s3:PutObject`)
 
 ---
 
@@ -86,6 +125,7 @@ Key services (all defined in `docker-compose.yml`):
    Services:
    - Airflow UI: `http://localhost:8080` (credentials: `admin` / `admin`)
    - Kafka UI: `http://localhost:8090`
+   - Streamlit Dashboard: `http://localhost:8501`
 
 5. **Validate before triggering**
    ```bash
@@ -102,9 +142,12 @@ Key services (all defined in `docker-compose.yml`):
    ```bash
    docker compose exec airflow-scheduler airflow dags trigger tfl_realtime_pipeline
    ```
-   The DAG runs every 15 minutes (`*/15 * * * *`). Monitor in the Airflow UI or via `docker compose logs airflow-scheduler`.
+   The DAG runs every 2 minutes. Monitor in the Airflow UI or via `docker compose logs airflow-scheduler`.
 
-8. **Shut down**
+8. **Access the Dashboard**
+   Once data is flowing, launch the Streamlit dashboard to see real-time analytics and visualizations.
+
+9. **Shut down**
    ```bash
    docker compose down
    ```
@@ -140,6 +183,58 @@ python scripts/tfl_ingest_minimal.py   # requires local Kafka at kafka:9092 or a
 | Temp JSON | `/tmp/tfl_data/` inside container | Coalesced JSON export used by `scripts/tfl_upload_s3.py`. |
 
 These directories are bind-mounted into the Airflow containers (`/opt/airflow/data/...`), so host tooling (Spark, pandas, etc.) can inspect files directly.
+
+---
+
+## Dashboard Features
+
+### Main Analytics View
+- **Wait Time Distribution**: Histogram showing the frequency of different wait times (0-30+ minutes)
+- **Top 10 Busiest Stations**: Horizontal bar chart with color-coded arrival counts
+- **Next 10 Arrivals**: Live table showing station, line, and minutes to arrival
+- **Average Wait by Station**: Sorted table of stations by average wait time
+
+### Geographic Visualizations
+- **Station Activity Heatmap**: Shows concentration of arrivals across London using color intensity
+- **Live Train Positions**: Map with color-coded markers indicating train proximity (< 2 min, 2-5 min, > 5 min)
+
+### Real-Time Updates
+- Auto-refresh every 5 seconds (configurable)
+- Live record counter
+- Timestamp of last update
+- Summary metrics: Average wait, total arrivals, number of stations, next train time
+
+---
+
+## Pipeline Monitoring
+
+### Airflow DAG Status
+The `tfl_realtime_pipeline` DAG consists of five tasks:
+1. **ingest_tfl_data**: Fetches data from TfL API and publishes to Kafka
+2. **consume_kafka_to_bronze**: Reads Kafka messages and writes to bronze layer
+3. **wait_for_consumption**: Ensures consumer has time to process messages
+4. **transform_with_spark**: PySpark transformation to gold layer
+5. **analyze_data**: Generates analytics and summary statistics
+
+All tasks should show green (success) status for a healthy pipeline run.
+
+### Kafka Monitoring
+Use the Kafka UI at `http://localhost:8090` to:
+- View message count in `tfl_raw` topic
+- Inspect message payloads
+- Monitor consumer group lag
+- Check partition distribution
+
+### Data Validation
+Run the validation script to check:
+- Kafka connectivity and topic existence
+- Bronze/gold directory contents
+- PySpark functionality
+- Data schema consistency
+
+```bash
+docker compose exec airflow-scheduler python /opt/airflow/scripts/check_pipeline.py
+```
 
 ---
 
@@ -179,9 +274,3 @@ These directories are bind-mounted into the Airflow containers (`/opt/airflow/da
    docker compose run --rm airflow-init
    docker compose up -d
    ```
-
-5. **Common issues**
-   - *Ingest task hangs*: usually waiting on TfL API or failing to reach Kafka (`kafka:9092`). Confirm network access from the Airflow container.
-   - *Consumer finds zero files*: ensure ingest actually published new messages and the consumer group is pointing to `tfl_raw`.
-   - *PySpark errors*: verify the Airflow image was rebuilt (so Java + PySpark exist) and the container has enough memory.
-   - *UID not found error*: Add `AIRFLOW_UID=50000` to your `.env` file and restart services.

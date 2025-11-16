@@ -19,7 +19,7 @@ def wait_for_kafka():
     """
     Wait for Kafka messages to be consumed
     """
-    print("⏳ Waiting 30 seconds for Kafka consumption...")
+    print("Waiting 30 seconds for Kafka consumption...")
     time.sleep(30)
 
 # Create the DAG
@@ -27,7 +27,7 @@ dag = DAG(
     'tfl_realtime_pipeline',
     default_args=default_args,
     description='TfL Real-time Data Pipeline: Ingest → Kafka → Transform → S3',
-    schedule_interval='*/15 * * * *',  # Every 15 minutes
+    schedule_interval=timedelta(minutes=2),  # Every 2 mins
     catchup=False,
     tags=['tfl', 'kafka', 'spark', 's3'],
 )
