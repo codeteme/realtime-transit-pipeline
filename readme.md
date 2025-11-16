@@ -9,21 +9,21 @@ This project ingests live arrival data from Transport for London (TfL), lands th
 ### Real-Time Dashboard
 The Streamlit dashboard provides comprehensive analytics on London Underground arrivals:
 
-![TfL Dashboard - Analytics]("screenshots/dashboard_analytics.png")
+![TfL Dashboard - Analytics](screenshots/dashboard_analytics.png)
 *Wait time distribution, top 10 busiest stations, next arrivals, and average wait times by station*
 
-![Station Activity Heatmap]("screenshots/station_heatmap.png")
+![Station Activity Heatmap](screenshots/station_heatmap.png)
 *Geographic heatmap showing station activity intensity across London*
 
-![Live Transit Dashboard]("screenshots/live_transit.png")
+![Live Transit Dashboard](screenshots/live_transit.png)
 *Real-time train positions with auto-refresh, showing 355 arrivals across 36 stations*
 
 ### Pipeline Orchestration
-![Airflow DAG Success]("screenshots/airflow_dag.png")
+![Airflow DAG Success](screenshots/airflow_dag.png)
 *Successful execution of the complete pipeline: ingest → consume → wait → transform → analyze*
 
 ### Kafka Streaming
-![Kafka UI - tfl_raw Topic]("screenshots/kafka_ui.png")
+![Kafka UI - tfl_raw Topic](screenshots/kafka_ui.png)
 *Kafka topic `tfl_raw` showing 2024 messages streamed in real-time*
 
 ---
