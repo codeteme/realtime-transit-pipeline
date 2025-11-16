@@ -7,8 +7,13 @@ logs/
 
 # Python environment
 venv/
+.venv
 .env
+.envrc
 __pycache__/
+
+# Screenshots
+screenshots/
 
 # Data artifacts (optional)
 data/bronze/
@@ -17,3 +22,4 @@ data/gold/
 # OS files
 .DS_Store
 
+.direnv/CACHEDIR.TAG
